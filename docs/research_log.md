@@ -50,42 +50,30 @@ Study axis–angle representation and derive general rotation formula.
 
 ### Goal
 
-Understand how a general 3D rotation can be represented
-using a single rotation axis and angle, and implement
-Rodrigues' rotation formula.
+Understand how any 3D rotation can be represented
+as a single rotation axis and angle,
+and implement Rodrigues' rotation formula.
 
 ---
 
 ### Theory Summary
 
-Any rotation in 3D (an element of SO(3)) can be expressed as:
+Any rotation in 3D can be expressed using:
 
-- A unit rotation axis **u**
-- A rotation angle **θ**
+- A unit rotation axis u
+- A rotation angle theta
 
-A vector **v** can be decomposed into:
+A vector v can be decomposed into:
 
-- Parallel component to the axis  
-- Perpendicular component to the axis  
-
-Mathematically:
-
-$$
-v = v_{\parallel} + v_{\perp}
-$$
+v = v_parallel + v_perp
 
 where
 
-$$
-v_{\parallel} = (u \cdot v)u
-$$
+v_parallel = (u · v) u  
+v_perp = v - v_parallel
 
-$$
-v_{\perp} = v - v_{\parallel}
-$$
-
-The parallel component remains unchanged,
-while the perpendicular component undergoes planar rotation.
+The parallel component remains unchanged.
+The perpendicular component undergoes planar rotation.
 
 ---
 
@@ -93,57 +81,48 @@ while the perpendicular component undergoes planar rotation.
 
 The rotated vector is:
 
-$$
-v' = v\cos\theta + (u \times v)\sin\theta
-+ u(u \cdot v)(1 - \cos\theta)
-$$
+```text
+v' = v cos(theta)
+     + (u × v) sin(theta)
+     + u (u · v) (1 - cos(theta))
+```
 
 Interpretation:
 
-- \( v\cos\theta \) → original direction component  
-- \( (u \times v)\sin\theta \) → 90° rotated component  
-- \( u(u \cdot v)(1 - \cos\theta) \) → axis component preservation  
+- v cos(theta) → original direction component
+- (u × v) sin(theta) → 90-degree rotated component
+- u (u · v)(1 - cos(theta)) → axis component preservation
 
-This structure mirrors the 2D rotation formula
-extended into 3D using the cross product.
+This extends the 2D rotation formula into 3D space.
 
 ---
 
 ### Matrix Form
 
-Define the skew-symmetric matrix of **u**:
+Define the skew-symmetric matrix of u:
 
-$$
-[u]_\times =
-\begin{bmatrix}
-0 & -u_z & u_y \\
-u_z & 0 & -u_x \\
--u_y & u_x & 0
-\end{bmatrix}
-$$
+```text
+[u]_x =
+[  0   -u_z   u_y
+   u_z   0   -u_x
+  -u_y   u_x    0 ]
+```
 
-Then Rodrigues’ rotation matrix becomes:
+Rodrigues rotation matrix:
 
-$$
-R = I + \sin\theta [u]_\times
-+ (1 - \cos\theta)[u]_\times^2
-$$
+```text
+R = I
+  + sin(theta) [u]_x
+  + (1 - cos(theta)) [u]_x^2
+```
 
-This matrix satisfies:
+Properties:
 
-$$
+```text
 R^T R = I
-$$
-
-$$
-\det(R) = 1
-$$
-
-Therefore:
-
-$$
-R \in SO(3)
-$$
+det(R) = 1
+R ∈ SO(3)
+```
 
 ---
 
@@ -151,32 +130,33 @@ $$
 
 Implemented:
 
-- `skew(u)`
-- `axis_angle_to_R(u, theta)`
+- skew(u)
+- axis_angle_to_R(u, theta)
 
-Numerically verified:
+Numerical verification:
 
-- \( R^T R \approx I \)
-- \( \det(R) \approx 1 \)
-- When \( u = [0,0,1] \), the result matches \( R_z(\theta) \)
+- R^T R ≈ I
+- det(R) ≈ 1
+- When u = [0,0,1], result matches Rz(theta)
 
 ---
 
 ### Insight
 
-Rodrigues' formula provides a geometric construction
-of any element in SO(3).
+Rodrigues' formula gives a geometric construction
+of any rotation matrix in SO(3).
 
-Even if a rotation is formed by multiple Euler rotations,
-the final result can always be represented as a single
-axis–angle rotation.
+Even if a rotation is composed from multiple Euler rotations,
+the final result can always be expressed
+as a single axis–angle rotation.
 
-This establishes a deeper geometric understanding
+This provides deeper geometric understanding
 of 3D rotations beyond coordinate-based representations.
 
 ---
 
 ### Next Step
 
-Study quaternion representation and understand
-why it is preferred in spacecraft attitude estimation.
+Study quaternion representation
+and understand why it is preferred
+in spacecraft attitude estimation.
