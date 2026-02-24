@@ -1,6 +1,6 @@
 import numpy as np
 
-
+####### day 1: basic rotation matrices #######
 def Rz(theta: float) -> np.ndarray:
     """
     Z-axis rotation matrix
@@ -39,3 +39,41 @@ def preserves_norm(R: np.ndarray, v: np.ndarray, tol: float = 1e-8) -> bool:
         np.linalg.norm(v),
         atol=tol
     )
+
+####### day 2: Rodrigues' rotation formula #######
+
+def skew(u: np.ndarray) -> np.ndarray:
+    """
+    Return skew-symmetric matrix of vector u.
+    [u]_x such that [u]_x v = u x v
+    """
+    ux, uy, uz = u
+    return np.array([
+        [0.0, -uz,  uy],
+        [uz,   0.0, -ux],
+        [-uy,  ux,   0.0]
+    ])
+
+
+def axis_angle_to_R(u: np.ndarray, theta: float) -> np.ndarray:
+    """
+    Rodrigues' rotation formula.
+
+    Parameters
+    ----------
+    u : (3,) ndarray
+        Rotation axis (not necessarily unit length)
+    theta : float
+        Rotation angle in radians
+
+    Returns
+    -------
+    R : (3,3) ndarray
+        Rotation matrix in SO(3)
+    """
+    u = u / np.linalg.norm(u)  # normalize axis
+    K = skew(u)
+    I = np.eye(3)
+
+    R = I + np.sin(theta) * K + (1 - np.cos(theta)) * (K @ K)
+    return R
