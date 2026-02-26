@@ -77,3 +77,27 @@ def axis_angle_to_R(u: np.ndarray, theta: float) -> np.ndarray:
 
     R = I + np.sin(theta) * K + (1 - np.cos(theta)) * (K @ K)
     return R
+
+####### day 3: Rodrigues' rotation formula #######
+def skew(u: np.ndarray) -> np.ndarray:
+    """Return skew-symmetric matrix of vector u."""
+    ux, uy, uz = u
+    return np.array([
+        [0,   -uz,  uy],
+        [uz,   0,  -ux],
+        [-uy, ux,   0]
+    ])
+
+
+def rodrigues(axis: np.ndarray, theta: float) -> np.ndarray:
+    """Rodrigues rotation matrix."""
+    axis = axis / np.linalg.norm(axis)
+    K = skew(axis)
+
+    R = (
+        np.eye(3)
+        + np.sin(theta) * K
+        + (1 - np.cos(theta)) * (K @ K)
+    )
+
+    return R
