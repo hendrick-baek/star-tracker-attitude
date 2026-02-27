@@ -3,7 +3,8 @@ from rotations import (
     Rz,
     is_orthogonal,
     preserves_norm,
-    axis_angle_to_R
+    axis_angle_to_R,
+    rodrigues
 )
 
 
