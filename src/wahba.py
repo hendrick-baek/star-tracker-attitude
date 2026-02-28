@@ -19,12 +19,12 @@ def build_B(b_vectors, r_vectors, weights=None):
     B : (3,3) ndarray
     """
     if weights is None:
-        weights = np.ones(len(b_vectors))
+        weights = np.ones(len(b_vectors)) #동일한 가중치로 설정 (가중치가 제공되지 않은 경우)
 
-    B = np.zeros((3, 3))
+    B = np.zeros((3, 3)) #B 초기화
 
-    for b, r, a in zip(b_vectors, r_vectors, weights):
-        B += a * np.outer(b, r)
+    for b, r, a in zip(b_vectors, r_vectors, weights): #zip()로 b, r, a를 동시에 순회
+        B += a * np.outer(b, r) #B += a * np.outer(b, r) : B에 가중치 a를 곱한 b와 r의 외적을 누적하여 더함
 
     return B
 
@@ -35,21 +35,21 @@ def build_K(B):
     """
     sigma = np.trace(B)
     S = B + B.T
-
+# K = S - sigma * I
     z = np.array([
         B[1, 2] - B[2, 1],
         B[2, 0] - B[0, 2],
         B[0, 1] - B[1, 0]
     ])
-
+# z 벡터는 B 행렬의 비대칭 부분에서 계산된 3차원 벡터로, B의 off-diagonal 요소들의 차이로 구성됨
     K = np.zeros((4, 4))
 
     K[0, 0] = sigma
     K[0, 1:] = z
     K[1:, 0] = z
     K[1:, 1:] = S - sigma * np.eye(3)
-
-    return K
+# K 행렬은 Davenport q-method에서 사용되는 4x4 대칭 행렬로, sigma는 B의 trace, S는 B와 B의 전치의 합, z는 B의 비대칭 부분에서 계산된 벡터를 이용하여 구성됨
+    return K 
 
 
 def solve_wahba(b_vectors, r_vectors, weights=None):
@@ -60,7 +60,7 @@ def solve_wahba(b_vectors, r_vectors, weights=None):
     B = build_B(b_vectors, r_vectors, weights)
     K = build_K(B)
 
-    eigvals, eigvecs = np.linalg.eigh(K)
+    eigvals, eigvecs = np.linalg.eigh(K) #K의 고유값과 고유벡터 계산 (eigh는 대칭 행렬에 최적화된 고유값 분해 함수)
     q_opt = eigvecs[:, np.argmax(eigvals)]
 
     # Normalize (just in case)

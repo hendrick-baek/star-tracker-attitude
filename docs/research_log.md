@@ -162,9 +162,10 @@ and understand why it is preferred
 in spacecraft attitude estimation.
 
 ---
-# Day 3 – Quaternion Rotation and Its Equivalence to Rodrigues and Rotation Matrices
 
-## Goal
+## Day 3 – Quaternion Rotation and Its Equivalence to Rodrigues and Rotation Matrices
+
+### Goal
 
 Establish a deep understanding of quaternion-based rotation,
 verify its equivalence to rotation matrices and Rodrigues’ formula,
@@ -172,14 +173,14 @@ and clarify conceptual misunderstandings encountered during implementation.
 
 ---
 
-# 1. Fundamental Question
+### 1. Fundamental Question
 
 How can quaternion rotation, matrix rotation, and Rodrigues' formula
 all represent the same 3D rotation if they seem structurally different?
 
 ---
 
-# 2. Quaternion Representation of Rotation
+### 2. Quaternion Representation of Rotation
 
 A quaternion is defined as:
 
@@ -195,7 +196,7 @@ w² + x² + y² + z² = 1
 
 ---
 
-# 3. Embedding a 3D Vector
+### 3. Embedding a 3D Vector
 
 A 3D vector v is embedded into quaternion space as:
 
@@ -207,7 +208,7 @@ which corresponds exactly to ℝ³.
 
 ---
 
-# 4. Quaternion Rotation Formula
+### 4. Quaternion Rotation Formula
 
 A vector is rotated using:
 
@@ -231,7 +232,7 @@ This structure ensures:
 
 ---
 
-# 5. Quaternion Multiplication
+### 5. Quaternion Multiplication
 
 Given:
 
@@ -256,7 +257,7 @@ The cross product term explains why quaternion algebra encodes 3D rotational str
 
 ---
 
-# 6. Quaternion to Rotation Matrix
+### 6. Quaternion to Rotation Matrix
 
 For a unit quaternion:
 
@@ -282,7 +283,7 @@ where [v]_× is the skew-symmetric matrix.
 
 ---
 
-# 7. Rodrigues’ Formula
+### 7. Rodrigues’ Formula
 
 Rodrigues’ rotation matrix is given by:
 
@@ -309,7 +310,7 @@ They are mathematically equivalent representations of SO(3).
 
 ---
 
-# 8. Practical Code Verification
+### 8. Practical Code Verification
 
 Three independent implementations were tested:
 
@@ -335,9 +336,9 @@ All three formulations produce identical 3D rotations.
 
 ---
 
-# 9. Clarified Conceptual Confusions
+### 9. Clarified Conceptual Confusions
 
-## Q1. Is Rodrigues 3D?
+#### Q1. Is Rodrigues 3D?
 
 Yes.
 
@@ -348,7 +349,7 @@ It provides a different algebraic representation of the same 3D rotation group.
 
 ---
 
-## Q2. Why embed vectors into 4D quaternion space?
+#### Q2. Why embed vectors into 4D quaternion space?
 
 Quaternion multiplication is defined only between quaternions.
 
@@ -358,7 +359,7 @@ The scalar zero enforces pure vector structure.
 
 ---
 
-## Q3. Why multiply by q*?
+#### Q3. Why multiply by q*?
 
 Because conjugation:
 
@@ -372,7 +373,7 @@ It ensures:
 
 ---
 
-## Q4. Why is q⁻¹ = q*?
+#### Q4. Why is q⁻¹ = q*?
 
 For unit quaternion:
 
@@ -386,7 +387,7 @@ This guarantees proper rotation behavior.
 
 ---
 
-## Q5. Why use skew matrices?
+#### Q5. Why use skew matrices?
 
 Because cross products define the rotation plane.
 
@@ -398,7 +399,7 @@ This connects quaternion algebra to linear matrix form.
 
 ---
 
-## Q6. Why do q and −q represent the same rotation?
+#### Q6. Why do q and −q represent the same rotation?
 
 Because:
 
@@ -410,7 +411,7 @@ Thus S³ is a double cover of SO(3).
 
 ---
 
-# 10. Key Insight from Day 3
+### 10. Key Insight from Day 3
 
 Quaternion rotation,
 Rodrigues’ formula,
@@ -429,7 +430,7 @@ All produce identical physical rotations.
 
 ---
 
-# Conclusion
+### Conclusion
 
 Day 3 established:
 
@@ -442,3 +443,230 @@ Day 3 established:
 
 This completes the mathematical foundation required
 for moving into Wahba’s problem and QUEST implementation.
+
+---
+
+## Day 4 – Wahba’s Problem and Davenport q-Method
+
+### Goal
+
+Understand the full mathematical structure of attitude estimation and implement
+a numerically verified solution to Wahba’s problem.
+
+---
+
+### 1. Problem Formulation
+
+Given vector pairs:
+
+- Inertial frame vectors r_i
+- Body frame measurements b_i
+
+Ideal relationship:
+
+b_i = R r_i
+
+Due to noise, exact equality does not hold.
+
+Wahba’s problem:
+
+minimize  Σ a_i || b_i - R r_i ||^2
+subject to R ∈ SO(3)
+
+---
+
+### 2. From Error Minimization to Alignment Maximization
+
+Expanding the squared norm leads to:
+
+maximize  Σ a_i b_i^T R r_i
+
+Interpretation:
+
+- b_i^T R r_i equals cosine of alignment angle
+- The objective becomes total alignment score
+
+Thus:
+
+Wahba = Find rotation that maximizes total vector alignment.
+
+---
+
+### 3. Matrix Reformulation
+
+Define:
+
+B = Σ a_i b_i r_i^T
+
+Then objective becomes:
+
+maximize  trace(R B^T)
+
+Key insight:
+
+- B compresses all measurement information
+- All vector pairs are summarized into a single 3×3 matrix
+
+---
+
+### 4. Re-parameterization: From R to Quaternion
+
+Direct optimization over R is difficult because:
+
+- R^T R = I
+- det(R) = 1
+
+Instead, use quaternion representation:
+
+R = R(q),  with  ||q|| = 1
+
+Important realization:
+
+The unknown did not change.
+Only the parameterization changed to simplify constraints.
+
+---
+
+### 5. Quadratic Form Reduction
+
+Substituting quaternion representation yields:
+
+trace(R(q) B^T) = q^T K q
+
+Where K is defined as:
+
+K =
+[  σ        z^T  ]
+[  z   S - σ I  ]
+
+with
+
+σ = trace(B)
+S = B + B^T
+z = skew part extracted from B
+
+This transforms Wahba into:
+
+maximize  q^T K q
+subject to  ||q|| = 1
+
+---
+
+### 6. Rayleigh Quotient Interpretation
+
+For symmetric K:
+
+maximize  q^T K q   with  ||q|| = 1
+
+Solution:
+
+The eigenvector corresponding to the largest eigenvalue of K.
+
+Interpretation:
+
+- K encodes measurement geometry
+- Largest eigenvector = rotation most strongly supported by data
+- Largest eigenvalue = maximum alignment score
+
+---
+
+### 7. Conceptual Insights Gained
+
+#### (1) Meaning of the Score
+
+q^T K q represents total weighted alignment between
+rotated inertial vectors and body measurements.
+
+Maximizing eigenvalue = minimizing geometric misalignment.
+
+---
+
+#### (2) Why Quaternion Simplifies Optimization
+
+SO(3) has nonlinear orthogonality constraints.
+
+Quaternion only requires:
+
+||q|| = 1
+
+Thus nonlinear constrained optimization becomes
+a unit-sphere eigenvalue problem.
+
+---
+
+#### (3) Frame Convention Issue (Important)
+
+During implementation, transpose ambiguity appeared.
+
+If:
+
+b = R r
+
+versus
+
+r = R b
+
+the estimated rotation may appear as R^T.
+
+Key realization:
+
+R^{-1} = R^T
+
+Transpose does not indicate algorithm failure,
+only difference in frame interpretation.
+
+---
+
+#### (4) Rotation Error Metric
+
+Angular difference between two rotations:
+
+θ = arccos( ( trace(R_true^T R_est) - 1 ) / 2 )
+
+This follows from:
+
+trace(R) = 1 + 2 cos(θ)
+
+Thus trace directly encodes rotation angle.
+
+---
+
+### 8. Numerical Verification
+
+Procedure:
+
+1. Generate random unit inertial vectors
+2. Apply known rotation
+3. Solve Wahba via Davenport q-method
+4. Convert quaternion to rotation matrix
+5. Compare with ground truth
+
+Result:
+
+|| R_true - R_est || ≈ 1e-16
+
+Confirms correctness in noise-free condition.
+
+---
+
+### 9. Milestones Achieved
+
+- Full understanding of Wahba structure
+- Clear interpretation of alignment score
+- Connection between geometry and eigenvalue theory
+- Clarified frame-direction ambiguity
+- Implemented and validated Davenport solution
+
+---
+
+### Next Step
+
+Introduce Gaussian noise and evaluate:
+
+- Angular estimation error
+- Sensitivity to number of vectors
+- Eigenvalue gap behavior
+
+Transition from theoretical validation to performance analysis.
+
+---
