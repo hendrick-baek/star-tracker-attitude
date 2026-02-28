@@ -670,3 +670,215 @@ Introduce Gaussian noise and evaluate:
 Transition from theoretical validation to performance analysis.
 
 ---
+## Day 5 – Noise Robustness Validation of Wahba / QUEST
+
+### Goal
+
+Validate the robustness of the implemented Wahba / Davenport q-method
+under realistic noisy measurements and complete Phase 1 verification.
+
+---
+
+### Motivation
+
+Until Day 4, all experiments were performed in a noise-free setting.
+In that case, the estimator perfectly recovers the true rotation.
+
+However, real star tracker measurements always contain noise.
+
+Thus, the key question becomes:
+
+How does the estimation error behave under noisy measurements?
+
+This marks the transition from pure mathematical correctness
+to practical algorithm robustness.
+
+---
+
+### Noise Model
+
+Given ideal body-frame measurements:
+
+b_i = R_true r_i
+
+Gaussian noise is injected:
+
+b_i_noisy = b_i + σ n_i  
+where n_i ~ N(0, I)
+
+Since star tracker measurements represent directions,
+all vectors must remain unit vectors.
+
+Therefore normalization is applied:
+
+b_i_noisy ← b_i_noisy / ||b_i_noisy||
+
+This preserves physical consistency of directional measurements.
+
+---
+
+### Rotation Error Definition
+
+To quantify estimation performance,
+the angular difference between the true rotation
+and the estimated rotation is computed.
+
+Define the relative rotation:
+
+R_err = R_true^T R_est
+
+Using the identity:
+
+trace(R) = 1 + 2 cosθ
+
+The rotation error angle is:
+
+θ = arccos((trace(R_err) - 1) / 2)
+
+The final reported metric is in degrees.
+
+This provides a physically interpretable performance measure.
+
+---
+
+### Monte Carlo Structure
+
+A single trial consists of:
+
+1. Generate N random inertial unit vectors
+2. Apply true rotation (30° about z-axis)
+3. Inject Gaussian noise
+4. Estimate rotation via Wahba / q-method
+5. Compute angular error
+
+To obtain statistical performance,
+the trial is repeated 500 times.
+
+Performance metrics:
+
+- Mean angular error
+- Standard deviation of angular error
+
+---
+
+### Experiment 1 – Sigma Sweep
+
+Vectors fixed at N = 5.
+
+Sigma values tested:
+
+0.001  
+0.01  
+0.05  
+
+Results:
+
+Sigma = 0.001  
+Mean Error ≈ 0.053 deg  
+Std  Error ≈ 0.023 deg  
+
+Sigma = 0.01  
+Mean Error ≈ 0.536 deg  
+Std  Error ≈ 0.253 deg  
+
+Sigma = 0.05  
+Mean Error ≈ 2.727 deg  
+Std  Error ≈ 1.167 deg  
+
+Observation:
+
+- Estimation error increases with measurement noise.
+- Standard deviation also increases.
+- Behavior is smooth and physically consistent.
+
+This confirms correct estimator implementation.
+
+---
+
+### Experiment 2 – Vector Count Sweep
+
+Sigma fixed at 0.01.
+
+Vector counts tested:
+
+2  
+3  
+5  
+8  
+
+Results:
+
+N = 2  
+Mean Error ≈ 1.245 deg  
+Std  Error ≈ 2.120 deg  
+
+N = 3  
+Mean Error ≈ 0.755 deg  
+Std  Error ≈ 0.401 deg  
+
+N = 5  
+Mean Error ≈ 0.534 deg  
+Std  Error ≈ 0.236 deg  
+
+N = 8  
+Mean Error ≈ 0.403 deg  
+Std  Error ≈ 0.168 deg  
+
+Observation:
+
+- Increasing vector count reduces mean error.
+- Standard deviation significantly decreases.
+- Two-vector case shows instability and high variance.
+
+This confirms the expected averaging effect
+of multiple independent measurements.
+
+---
+
+### Critical Debug Insight
+
+During implementation, a frame-convention mismatch was discovered.
+
+Initial experiments yielded ~60° constant error,
+indicating reversed argument ordering in Wahba solver.
+
+Correcting the inertial/body vector ordering
+resolved the issue and restored near-zero error in the low-noise regime.
+
+This validated correct frame interpretation.
+
+---
+
+### Phase 1 Conclusion
+
+At this stage:
+
+- SO(3) structure understood
+- Rodrigues formula implemented
+- Quaternion representation verified
+- Wahba cost reformulated to eigenvalue problem
+- Davenport q-method implemented
+- Frame convention validated
+- Noise robustness experimentally verified
+
+Phase 1 is complete.
+
+The estimator is mathematically correct,
+numerically stable,
+and robust under realistic measurement noise.
+
+---
+
+### Next Step
+
+Transition to Phase 2:
+
+Star Tracker Geometry Modeling
+
+- Field-of-view modeling
+- Sensor geometry
+- Realistic star distribution
+- Image-to-vector mapping
+
+Move from abstract vector pairs
+to physically modeled sensor measurements.
