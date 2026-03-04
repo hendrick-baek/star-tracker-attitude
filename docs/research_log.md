@@ -882,3 +882,164 @@ Star Tracker Geometry Modeling
 
 Move from abstract vector pairs
 to physically modeled sensor measurements.
+
+---
+## Day 6 – Star Tracker Field-of-View Geometry and Frame Consistency
+
+### Goal
+
+Establish a geometrically consistent sensor model for the star tracker,
+define frame conventions rigorously,
+and derive the mathematical structure of the field-of-view (FOV) condition.
+
+This marks the formal beginning of Phase 2:
+transitioning from abstract vector pairs to physically modeled measurements.
+
+---
+
+## 1. Frame Convention (Project-Wide Fixation)
+
+To eliminate ambiguity in all subsequent derivations,
+the rotation convention is fixed as:
+
+b = R r
+
+where:
+
+- r : inertial-frame unit vector (true star direction)
+- b : body/camera-frame unit vector
+- R : rotation from inertial frame to body frame
+
+Thus:
+
+- R maps inertial vectors into the camera coordinate system
+- R^T maps body vectors back into inertial space
+
+This convention will be maintained throughout Phase 2–6.
+
+---
+
+## 2. Camera Boresight Definition
+
+The camera boresight (optical axis) is defined in body frame as:
+
+c = [0, 0, 1]^T
+
+Interpretation:
+
+- The camera looks along its +z axis
+- x and y axes span the image plane
+- c is fixed in the body frame
+
+---
+
+## 3. Field-of-View Geometry
+
+A star is visible only if its direction lies inside the FOV cone.
+
+Let θ_fov denote the half-angle of the conical FOV.
+
+In body frame, the visibility condition is:
+
+angle(b, c) ≤ θ_fov
+
+Using the dot product identity for unit vectors:
+
+b · c = cos(angle)
+
+The FOV condition becomes:
+
+b · c ≥ cos(θ_fov)
+
+This converts an angular constraint into a simple inner-product threshold.
+
+---
+
+## 4. Equivalent Inertial-Frame Expression
+
+Since:
+
+b = R r
+
+the FOV condition can be rewritten:
+
+(R r) · c ≥ cos(θ_fov)
+
+Using inner-product symmetry:
+
+r · (R^T c) ≥ cos(θ_fov)
+
+Interpretation:
+
+- R^T c is the boresight direction expressed in inertial frame.
+- Thus visibility may equivalently be tested in inertial coordinates.
+
+This confirms complete frame consistency.
+
+---
+
+## 5. Geometric Interpretation
+
+The FOV condition defines a cone in body space.
+
+On the unit sphere of directions,
+this corresponds to a **spherical cap** centered at c.
+
+Thus:
+
+- All unit vectors lie on the unit sphere
+- The FOV selects a spherical cap of angular radius θ_fov
+- The visible star set depends entirely on spacecraft attitude R
+
+---
+
+## 6. Rotation Axis Insight
+
+A critical geometric observation:
+
+If the spacecraft rotates about the boresight axis (z-axis),
+the boresight direction remains unchanged.
+
+Therefore:
+
+- The spherical cap does not move in inertial space
+- The visible star set remains unchanged
+- Only image orientation rotates
+
+However, rotation about any axis perpendicular to the boresight
+tilts the cone and changes the visible star set.
+
+This distinction is essential for later sensitivity analysis.
+
+---
+
+## 7. Phase 2 Structural Model (Established)
+
+The complete sensor model structure is now defined:
+
+1. Generate inertial star directions r_i
+2. Apply spacecraft attitude: b_i = R_true r_i
+3. Apply FOV filter: b_i · c ≥ cos(θ_fov)
+4. Add measurement noise and renormalize
+5. Output measurement set {r_i, b_i_meas}
+
+Unlike Phase 1, the number of usable vectors
+is now determined by FOV geometry,
+not arbitrarily fixed.
+
+---
+
+## Day 6 Conclusion
+
+The star tracker sensor model geometry is now fully defined.
+
+Key achievements:
+
+- Frame convention rigorously fixed
+- FOV condition derived and interpreted
+- Inertial/body equivalence proven
+- Spherical cap geometry established
+- Rotation-axis effects understood
+
+Phase 2 can now proceed to statistical visibility analysis
+and realistic star-density modeling.
