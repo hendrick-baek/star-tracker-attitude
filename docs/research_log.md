@@ -1043,3 +1043,245 @@ Key achievements:
 
 Phase 2 can now proceed to statistical visibility analysis
 and realistic star-density modeling.
+
+---
+## Day 7 – Star Density Modeling and Expected Visible Star Count
+
+### Goal
+
+Understand how the star tracker field-of-view (FOV) geometry determines the
+expected number of visible stars, and validate this relationship through
+simulation.
+
+This step connects the geometric FOV model established in Day 6 with the
+statistical properties of the observable star field.
+
+---
+
+## 1. Problem Motivation
+
+The star tracker does not observe the entire sky.
+
+Instead, it observes only a limited conical region defined by the sensor FOV.
+
+Thus the number of observable stars depends on two factors:
+
+1. Total star density in the sky
+2. Fraction of the sky covered by the FOV
+
+Understanding this relationship is essential because the number of available
+vector measurements directly affects the stability and accuracy of attitude
+estimation algorithms such as QUEST.
+
+---
+
+## 2. Isotropic Star Distribution Model
+
+As a first-order approximation, the star field is modeled as an isotropic
+distribution on the unit sphere.
+
+This means:
+
+- Star directions are uniformly distributed over the sphere
+- Every direction in space has equal probability
+
+Mathematically, this corresponds to sampling random unit vectors:
+
+v ~ Uniform(S²)
+
+where S² denotes the surface of the unit sphere.
+
+This assumption simplifies the analysis and provides a useful baseline model
+before introducing realistic star catalog distributions.
+
+---
+
+## 3. Total Surface Area of the Unit Sphere
+
+The surface area of the unit sphere is:
+
+A_sphere = 4π
+
+This represents the total angular domain of all possible star directions.
+
+---
+
+## 4. Spherical Cap Area (Field-of-View Region)
+
+The FOV cone corresponds to a **spherical cap** on the unit sphere.
+
+For an FOV half-angle θ_fov, the spherical cap area is:
+
+A_cap = 2π (1 − cos θ_fov)
+
+This region contains all star directions satisfying:
+
+b · c ≥ cos θ_fov
+
+where:
+
+b = body-frame star direction  
+c = camera boresight direction
+
+---
+
+## 5. Fraction of the Sky Visible
+
+The fraction of the sky visible inside the FOV is therefore:
+
+fraction_visible = A_cap / A_sphere
+
+Substituting the sphere and cap areas:
+
+fraction_visible = (1 − cos θ_fov) / 2
+
+This equation directly relates the sensor FOV angle to the probability that a
+random star lies inside the visible region.
+
+---
+
+## 6. Expected Number of Visible Stars
+
+If the sky contains N_total stars, the expected number inside the FOV is:
+
+N_visible = N_total * (1 − cos θ_fov) / 2
+
+This equation provides a theoretical prediction that can be verified using
+Monte Carlo simulation.
+
+---
+
+## 7. Numerical Simulation of Visible Star Fraction
+
+A Monte Carlo simulation was performed using randomly generated unit vectors
+distributed uniformly on the sphere.
+
+The procedure was:
+
+1. Generate a large number of random unit vectors
+2. Apply the FOV condition
+
+   b · c ≥ cos θ_fov
+
+3. Count the number of vectors satisfying the condition
+4. Compare the observed fraction with the theoretical prediction
+
+Example results:
+
+FOV = 10°  
+theory fraction = 0.007596  
+observed fraction = 0.007490  
+
+FOV = 20°  
+theory fraction = 0.030154  
+observed fraction = 0.030320  
+
+FOV = 40°  
+theory fraction = 0.116978  
+observed fraction = 0.117235  
+
+FOV = 60°  
+theory fraction = 0.250000  
+observed fraction = 0.248055  
+
+The observed fractions closely match the theoretical values, confirming that
+the spherical-cap FOV model has been implemented correctly.
+
+---
+
+## 8. Introducing Sensor Detectability (Magnitude Cut)
+
+In practice, not every star inside the FOV is observable.
+
+Stars must also be bright enough to be detected by the camera sensor.
+
+This introduces a **magnitude threshold**:
+
+m ≤ m_lim
+
+where:
+
+m = star magnitude  
+m_lim = sensor detection limit
+
+Stars with magnitude larger than this threshold are too dim to be detected.
+
+---
+
+## 9. Magnitude-Based Filtering Model
+
+Each simulated star was assigned a magnitude sampled from a uniform range.
+
+The visibility pipeline became:
+
+1. Generate isotropic star directions
+2. Apply FOV geometric filter
+3. Apply magnitude detection threshold
+
+Only stars satisfying both conditions remain in the observable set.
+
+Example results:
+
+FOV = 20°  
+
+m_lim = 2.0 → visible stars ≈ 1470  
+m_lim = 4.0 → visible stars ≈ 2940  
+m_lim = 6.0 → visible stars ≈ 4451  
+m_lim = 8.0 → visible stars ≈ 5997  
+
+As expected, increasing the magnitude limit increases the number of visible
+stars.
+
+---
+
+## 10. Key Insights
+
+Several important insights emerged from this analysis.
+
+First, the number of observable stars grows nonlinearly with the FOV angle
+because the spherical cap area depends on cos θ.
+
+Second, the magnitude threshold acts as an independent visibility filter,
+reducing the effective number of usable vectors.
+
+Finally, the full sensor measurement process can now be modeled as a pipeline:
+
+1. Generate inertial star vectors r_i
+2. Apply spacecraft attitude: b_i = R_true r_i
+3. Apply FOV constraint
+4. Apply magnitude detection threshold
+5. Add measurement noise
+
+The resulting vector pairs form the input to the Wahba / QUEST attitude
+estimation algorithms.
+
+---
+
+## Day 7 Conclusion
+
+The relationship between FOV geometry and observable star count has been
+successfully derived and validated.
+
+Key achievements:
+
+- Derived spherical-cap FOV visibility fraction
+- Verified theoretical predictions using Monte Carlo simulation
+- Implemented magnitude-based detectability filtering
+- Established a complete sensor visibility pipeline
+
+This completes the geometric and statistical foundation required for
+realistic star tracker measurement simulation.
+
+---
+
+## Next Step
+
+Extend the sensor model to generate full measurement pairs:
+
+r_i (inertial vectors)  
+b_i = R_true r_i (body-frame measurements)
+
+with FOV filtering, magnitude detection, and measurement noise.
+
+This will produce realistic inputs for attitude estimation algorithms such as
+Wahba’s problem and QUEST.
