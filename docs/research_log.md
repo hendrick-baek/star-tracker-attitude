@@ -1426,13 +1426,13 @@ Connect the measurement simulator to the QUEST estimator and evaluate the
 attitude estimation error.
 
 ---
-## Day 9 – Attitude Estimation Using QUEST with Simulated Star Tracker Measurements
+## Day 9 – Attitude Estimation Using the Davenport q-Method with Simulated Star Tracker Measurements
 
 ### Goal
 
-Integrate the star tracker measurement simulator with the Wahba / QUEST
-attitude estimation algorithm and evaluate the resulting attitude estimation
-error.
+Integrate the star tracker measurement simulator with a Wahba-based
+attitude estimation algorithm and evaluate the resulting attitude
+estimation error.
 
 This step completes the first fully functional attitude determination pipeline.
 
@@ -1510,8 +1510,12 @@ where K is a symmetric matrix constructed from the vector pairs.
 The optimal solution is the eigenvector corresponding to the
 largest eigenvalue of K.
 
-This method is known as the **Davenport q-method** and forms the
-mathematical basis of the QUEST algorithm.
+This method is known as the **Davenport q-method**, which provides
+an efficient closed-form solution to Wahba’s problem.
+
+The QUEST algorithm, introduced later, solves the same Wahba problem
+using a different numerical strategy based on Newton iteration
+to estimate the maximum eigenvalue.
 
 ---
 
@@ -1571,8 +1575,8 @@ correctly.
 
 Key observations:
 
-- The QUEST estimator successfully reconstructs spacecraft attitude
-  from noisy star measurements.
+- The Davenport-based Wahba estimator successfully reconstructs
+  spacecraft attitude from noisy star measurements.
 
 - The estimation accuracy depends on the measurement noise level
   and the number of available star vectors.
@@ -1588,7 +1592,7 @@ At this stage the simulation system contains three main components:
 
 Star field model  
 → Star tracker sensor model  
-→ Attitude estimation algorithm
+→ Wahba-based attitude estimation algorithm
 
 This modular structure mirrors the architecture used in
 actual spacecraft attitude determination research.
@@ -1605,7 +1609,7 @@ The system now performs:
 star field simulation  
 → spacecraft attitude transformation  
 → sensor measurement modeling  
-→ Wahba attitude estimation  
+→ Wahba attitude estimation (Davenport q-method)  
 → estimation error evaluation
 
 This marks the completion of the first full attitude determination
@@ -1615,7 +1619,9 @@ simulation framework.
 
 ## Next Step
 
-Perform Monte Carlo experiments to analyze the relationship between:
+Introduce additional attitude estimation algorithms such as
+TRIAD and QUEST, and perform Monte Carlo experiments to analyze
+the relationship between:
 
 measurement noise  
 number of observed stars  
@@ -1623,8 +1629,8 @@ field-of-view size
 
 and the resulting attitude estimation accuracy.
 
-This analysis will produce performance curves used to evaluate
-the robustness of the star tracker system.
+This will enable systematic comparison between simple geometric
+estimators and optimal Wahba-based solutions.
 
 ---
 ## Day 10 – TRIAD Attitude Determination Baseline
@@ -1851,3 +1857,292 @@ under varying conditions such as:
 - number of visible stars
 
 This will provide quantitative insight into the robustness and accuracy differences between simple geometric and optimal attitude estimation methods.
+
+---
+## Day 11 – QUEST Algorithm Implementation and Verification
+
+### Goal
+
+Implement the QUEST (QUaternion ESTimator) algorithm and verify that it
+produces the same optimal attitude estimate as the previously implemented
+Davenport q-method.
+
+This step completes the implementation of two optimal Wahba solvers and
+establishes the final estimator set used in subsequent Monte Carlo
+performance analysis.
+
+---
+
+## 1. Motivation
+
+By Day 9, the star tracker measurement simulator had been successfully
+connected to an attitude estimation algorithm based on Wahba’s problem,
+solved using the Davenport q-method.
+
+Although the Davenport approach is mathematically straightforward,
+it requires computing the eigenvalues and eigenvectors of a 4×4 matrix.
+
+In practical spacecraft systems, particularly early onboard computers,
+full eigenvalue decomposition can be computationally expensive.
+
+The QUEST algorithm was introduced to solve the same Wahba problem
+more efficiently by avoiding explicit eigenvalue decomposition.
+
+Instead, QUEST estimates the maximum eigenvalue using a scalar
+root-finding method and reconstructs the optimal quaternion afterward.
+
+Thus, QUEST provides a computationally efficient alternative to
+Davenport’s method while producing the same optimal attitude solution.
+
+---
+
+## 2. Relationship Between Wahba, Davenport, and QUEST
+
+Both Davenport and QUEST solve the same Wahba optimization problem.
+
+Wahba problem:
+
+minimize
+
+Σ a_i || b_i − R r_i ||²
+
+subject to
+
+R ∈ SO(3)
+
+Using quaternion parameterization, the problem becomes:
+
+maximize
+
+qᵀ K q
+
+subject to
+
+||q|| = 1
+
+where K is the Davenport matrix constructed from measurement vectors.
+
+The optimal quaternion corresponds to the eigenvector associated
+with the largest eigenvalue of K.
+
+The key difference between algorithms lies in how this optimal
+eigenvector is obtained.
+
+Davenport method:
+
+- Compute eigenvalues and eigenvectors of K directly
+
+QUEST method:
+
+- Estimate the largest eigenvalue λ using Newton iteration
+- Reconstruct the quaternion analytically afterward
+
+Thus both algorithms produce the same optimal quaternion.
+
+---
+
+## 3. QUEST Mathematical Structure
+
+The quaternion is partitioned as:
+
+q = [ q0 ]
+    [ qv ]
+
+where
+
+q0 : scalar part  
+qv : 3×1 vector part
+
+The Davenport matrix has block structure:
+
+K =
+[ σ        zᵀ ]
+[ z   S − σI ]
+
+with
+
+σ = trace(B)  
+S = B + Bᵀ  
+z = skew(B)
+
+Expanding the eigenvalue equation
+
+K q = λ q
+
+yields the relation
+
+((σ + λ)I − S) qv = z q0
+
+Define
+
+M(λ) = (σ + λ)I − S
+
+Then
+
+M(λ) qv = z q0
+
+Dividing by q0 (assuming q0 ≠ 0):
+
+qv / q0 = M(λ)⁻¹ z
+
+Let
+
+p = qv / q0
+
+Then
+
+p = M(λ)⁻¹ z
+
+Once the largest eigenvalue λ is known,
+the quaternion can be reconstructed as
+
+q ∝ [1 , p]
+
+followed by normalization.
+
+Thus QUEST reduces the eigenvector problem to finding λ.
+
+---
+
+## 4. Eigenvalue Estimation via Newton Iteration
+
+Instead of solving the characteristic equation explicitly,
+QUEST estimates the largest eigenvalue using Newton iteration.
+
+Given a scalar function f(λ) derived from the characteristic equation,
+the iteration update is
+
+λ_{k+1} = λ_k − f(λ_k) / f′(λ_k)
+
+The initial estimate is typically chosen as
+
+λ₀ = Σ a_i
+
+which corresponds to the total weight of the measurements.
+
+Because the largest eigenvalue lies near this value,
+Newton iteration converges rapidly.
+
+In practice only a few iterations are required.
+
+---
+
+## 5. Implementation
+
+A new module was created:
+
+src/quest.py
+
+Main functions:
+
+solve_quest()
+
+Returns the optimal quaternion using the QUEST algorithm.
+
+solve_quest_rotation()
+
+Wrapper function that returns the rotation matrix while preserving
+the project rotation convention
+
+b = R r
+
+This function internally performs
+
+q = solve_quest(...)
+R = quat_to_rot(q)ᵀ
+
+similar to the previously introduced Davenport wrapper.
+
+---
+
+## 6. Verification Against Davenport q-Method
+
+To validate the implementation,
+QUEST results were compared directly with the Davenport solver.
+
+Both algorithms were applied to the same simulated
+star tracker measurement set.
+
+Example output:
+
+Visible stars: 72
+
+QUEST Error ≈ 0.0259 deg  
+Davenport Error ≈ 0.0259 deg
+
+The errors were numerically identical within floating-point precision.
+
+This confirms that:
+
+- The QUEST implementation is correct
+- Both algorithms recover the same optimal Wahba solution
+
+---
+
+## 7. Interpretation
+
+The identical attitude errors demonstrate that
+QUEST and Davenport are mathematically equivalent
+solvers of Wahba’s problem.
+
+The difference lies only in computational strategy:
+
+Davenport:
+
+- Direct eigenvalue decomposition
+
+QUEST:
+
+- Scalar eigenvalue estimation
+- Quaternion reconstruction
+
+Thus QUEST provides the same optimal solution
+while potentially reducing computational cost.
+
+---
+
+## 8. Attitude Estimator Set Established
+
+At this stage the simulation framework contains three
+attitude estimation algorithms:
+
+TRIAD
+
+A geometric two-vector solution used as a simple baseline estimator.
+
+QUEST
+
+An efficient optimal Wahba solver using Newton iteration.
+
+Davenport q-method
+
+A direct eigenvalue-based Wahba solver used as a reference solution.
+
+This estimator set enables systematic algorithm comparison.
+
+---
+
+## Day 11 Conclusion
+
+The QUEST algorithm has been successfully implemented and validated.
+
+Verification against the Davenport q-method confirms that
+both algorithms produce identical optimal attitude estimates.
+
+The star tracker simulation framework now supports multiple
+attitude determination methods, enabling comparative analysis
+of estimator performance under realistic sensor conditions.
+
+---
+
+## Next Step
+
+Perform Monte Carlo performance analysis comparing
+the behavior of TRIAD and QUEST under varying conditions:
+
+measurement noise  
+number of observed stars  
+field-of-view size
+
+This analysis will produce performance curves that characterize
+the robustness and accuracy of each attitude estimation method.

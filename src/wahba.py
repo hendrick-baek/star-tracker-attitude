@@ -67,3 +67,106 @@ def solve_wahba(b_vectors, r_vectors, weights=None):
     q_opt = q_opt / np.linalg.norm(q_opt)
 
     return q_opt
+
+from quaternion import quat_to_rot
+
+def solve_wahba_rotation(b_vectors, r_vectors, weights=None):
+    """
+    Solve Wahba problem and return rotation matrix
+    with project convention:
+
+        b = R r
+
+    Parameters
+    ----------
+    b_vectors : ndarray, shape (N, 3)
+        Body-frame measured unit vectors
+    r_vectors : ndarray, shape (N, 3)
+        Inertial-frame reference unit vectors
+    weights : ndarray, optional
+        Weights for Wahba cost
+
+    Returns
+    -------
+    R : ndarray, shape (3, 3)
+        Rotation matrix from inertial frame to body frame
+    """
+    q_opt = solve_wahba(b_vectors, r_vectors, weights)
+    R = quat_to_rot(q_opt).T
+    return R
+
+"""
+Wahba Problem Solver (Davenport q-method)
+=========================================
+
+This module implements the Wahba attitude determination solution
+using the Davenport q-method.
+
+Project Rotation Convention
+---------------------------
+Throughout this project we use the following convention:
+
+    b = R r
+
+where
+
+    r : inertial-frame unit vector
+    b : body-frame (camera) unit vector
+    R : rotation matrix from inertial frame -> body frame
+
+Important Implementation Detail
+-------------------------------
+The core Wahba solver `solve_wahba()` returns the optimal quaternion
+that maximizes the Wahba objective function using the Davenport
+K-matrix eigenvalue method.
+
+However, when converting this quaternion to a rotation matrix using
+
+    quat_to_rot(q)
+
+the resulting matrix corresponds to the opposite mapping relative to
+the project convention. In practice, this means the rotation matrix
+obtained from the quaternion is effectively the transpose of the
+desired inertial -> body rotation.
+
+This behavior originates from the quaternion-to-rotation conversion
+convention used in `quat_to_rot()`.
+
+As a result, the correct rotation matrix for this project must be
+
+    R = quat_to_rot(q).T
+
+Wrapper Function
+----------------
+To avoid scattering `.T` corrections throughout the codebase,
+this module provides a wrapper:
+
+    solve_wahba_rotation()
+
+which internally performs
+
+    q = solve_wahba(...)
+    R = quat_to_rot(q).T
+
+and directly returns the rotation matrix that satisfies the
+project convention:
+
+    b = R r
+
+Recommended Usage
+-----------------
+For most attitude estimation tasks in this project, use:
+
+    solve_wahba_rotation(...)
+
+If the quaternion solution itself is needed (for analysis or debugging),
+`solve_wahba()` can still be called directly.
+
+Summary
+-------
+solve_wahba()          -> returns optimal quaternion
+solve_wahba_rotation() -> returns rotation matrix (inertial -> body)
+
+This design preserves the original solver while ensuring consistent
+frame conventions across the project.
+"""
