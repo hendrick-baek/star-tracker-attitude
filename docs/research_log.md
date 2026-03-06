@@ -1625,3 +1625,229 @@ and the resulting attitude estimation accuracy.
 
 This analysis will produce performance curves used to evaluate
 the robustness of the star tracker system.
+
+---
+## Day 10 – TRIAD Attitude Determination Baseline
+
+### Goal
+
+Implement the TRIAD attitude determination algorithm and integrate it into the existing star tracker simulation pipeline.
+
+The objective of this step is to introduce a simple baseline estimator that uses only two vector observations, and compare its behavior with the existing Wahba/Davenport-based optimal estimator.
+
+This prepares the system for future Monte Carlo performance analysis between simple geometric attitude determination (TRIAD) and optimal Wahba-based solutions.
+
+---
+
+### 1. Motivation
+
+Until Day 9, the complete pipeline consisted of:
+
+1. Star field generation
+2. Star tracker measurement simulation
+3. Attitude estimation using the Wahba problem solved via the Davenport q-method
+
+This pipeline already demonstrated that the simulated measurements could be used to recover spacecraft attitude with high accuracy.
+
+However, the current estimator uses **all available star observations** and solves a global optimization problem.  
+To properly evaluate estimator performance, it is useful to introduce a **simpler baseline algorithm**.
+
+TRIAD is commonly used for this purpose because:
+
+- It requires only **two vector observations**
+- It has **very low computational cost**
+- It directly constructs the rotation matrix geometrically
+- It is widely used as an initialization or baseline method in spacecraft attitude determination
+
+Therefore, TRIAD is implemented as the first comparison estimator before performing Monte Carlo experiments.
+
+---
+
+### 2. TRIAD Algorithm Overview
+
+Assume two corresponding vector observations:
+
+r1, r2 : inertial frame unit vectors  
+b1, b2 : body frame unit vectors
+
+The project rotation convention is
+
+b = R r
+
+where R is the rotation from inertial frame to body frame.
+
+The TRIAD algorithm constructs orthonormal bases (triads) in both frames.
+
+#### Inertial Frame Triad
+
+t1_r = r1  
+t2_r = normalize(r1 × r2)  
+t3_r = t1_r × t2_r
+
+These vectors form an orthonormal basis
+
+T_r = [ t1_r  t2_r  t3_r ]
+
+#### Body Frame Triad
+
+t1_b = b1  
+t2_b = normalize(b1 × b2)  
+t3_b = t1_b × t2_b
+
+which forms
+
+T_b = [ t1_b  t2_b  t3_b ]
+
+#### Rotation Matrix
+
+The rotation from inertial to body frame is
+
+R = T_b T_r^T
+
+This rotation satisfies the project convention
+
+b = R r
+
+---
+
+### 3. Implementation
+
+A new module was added:
+
+src/triad.py
+
+Core function:
+
+solve_triad(r1, r2, b1, b2)
+
+Input:
+- two inertial reference vectors
+- two body-frame measurements
+
+Output:
+- rotation matrix R (inertial → body)
+
+Important implementation details:
+
+- All vectors are normalized
+- Cross product magnitude is checked to avoid nearly parallel vectors
+- Triad basis vectors are stacked as matrix columns
+
+---
+
+### 4. Integration with Star Tracker Simulation
+
+The existing star tracker pipeline already outputs:
+
+r_visible : inertial-frame star directions  
+b_meas : body-frame measured directions (with noise)
+
+Since TRIAD requires only two vector pairs, the first two visible stars are selected:
+
+r1 = r_visible[0]  
+r2 = r_visible[1]
+
+b1 = b_meas[0]  
+b2 = b_meas[1]
+
+These vectors are passed to:
+
+solve_triad()
+
+which returns the TRIAD attitude estimate.
+
+---
+
+### 5. Wahba/Davenport Solver Convention Issue
+
+During integration, a frame convention mismatch appeared.
+
+The Wahba solver (`solve_wahba`) returns the optimal quaternion obtained from the Davenport K-matrix eigenvalue solution.
+
+When converted to a rotation matrix using
+
+quat_to_rot(q)
+
+the resulting matrix corresponds to the opposite mapping relative to the project convention.
+
+Therefore the correct inertial → body rotation must be
+
+R = quat_to_rot(q)^T
+
+To prevent this transpose from appearing throughout the codebase, a wrapper function was introduced.
+
+New function:
+
+solve_wahba_rotation(b_vectors, r_vectors)
+
+which performs:
+
+q = solve_wahba(...)  
+R = quat_to_rot(q).T
+
+This wrapper ensures all returned rotation matrices satisfy the project convention
+
+b = R r
+
+while preserving the original quaternion-based solver.
+
+---
+
+### 6. Experimental Test
+
+The TRIAD estimator and the Davenport/Wahba estimator were tested using the same simulated measurements.
+
+Example output:
+
+Visible stars: 72
+
+TRIAD Attitude Error ≈ 0.44 deg  
+Davenport/Wahba Attitude Error ≈ 0.026 deg
+
+---
+
+### 7. Interpretation
+
+The result matches the expected behavior of the two algorithms.
+
+TRIAD:
+
+- Uses only two vector observations
+- Does not average measurement noise
+- Therefore produces larger attitude error
+
+Davenport/Wahba:
+
+- Uses all visible stars
+- Solves a global optimal alignment problem
+- Achieves significantly smaller error
+
+This confirms that the simulation pipeline and both estimators are functioning correctly.
+
+---
+
+### Conclusion
+
+Day 10 successfully introduced a geometric baseline estimator (TRIAD) into the star tracker attitude determination pipeline.
+
+The system now supports two attitude estimation methods:
+
+TRIAD (two-vector geometric solution)  
+Davenport/Wahba (optimal multi-vector solution)
+
+This enables meaningful performance comparisons in future experiments.
+
+---
+
+### Next Step
+
+The next phase will perform **Monte Carlo performance analysis** comparing:
+
+TRIAD vs Davenport/Wahba
+
+under varying conditions such as:
+
+- measurement noise level
+- number of visible stars
+
+This will provide quantitative insight into the robustness and accuracy differences between simple geometric and optimal attitude estimation methods.
