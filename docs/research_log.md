@@ -1285,3 +1285,343 @@ with FOV filtering, magnitude detection, and measurement noise.
 
 This will produce realistic inputs for attitude estimation algorithms such as
 Wahba’s problem and QUEST.
+
+---
+## Day 8 – Full Star Tracker Measurement Simulation Pipeline
+
+### Goal
+
+Construct a complete simulation pipeline that generates realistic star tracker
+measurements for attitude estimation experiments.
+
+This step connects the star field model developed in previous days with the
+attitude estimation framework used in Wahba’s problem and QUEST.
+
+---
+
+## 1. Motivation
+
+In real spacecraft systems, star trackers do not directly provide attitude.
+Instead, they measure directions of stars in the camera frame.
+
+Attitude estimation algorithms must reconstruct the spacecraft orientation from
+these measurements.
+
+Therefore a realistic simulation must generate measurement pairs:
+
+r_i : inertial reference star directions  
+b_i : measured star directions in the body frame
+
+These vector pairs form the input to Wahba’s problem.
+
+---
+
+## 2. Measurement Generation Pipeline
+
+The full simulation pipeline consists of the following stages.
+
+1. Generate inertial star directions  
+2. Apply spacecraft rotation  
+3. Apply camera field-of-view constraint  
+4. Apply magnitude detection threshold  
+5. Add sensor measurement noise  
+
+This sequence models the complete sensing process of a star tracker.
+
+---
+
+## 3. Inertial Star Vector Generation
+
+Stars are first modeled as random unit vectors distributed uniformly over the
+sphere.
+
+Mathematically:
+
+r_i ∈ S²
+
+This represents an isotropic approximation of the star field.
+
+---
+
+## 4. Spacecraft Attitude Transformation
+
+A known spacecraft rotation R_true is applied to transform inertial star
+directions into the body frame.
+
+b_i_true = R_true r_i
+
+This represents the ideal noiseless star tracker observation.
+
+---
+
+## 5. Field-of-View Filtering
+
+The star tracker can only observe stars within its camera field-of-view.
+
+Using the camera boresight vector c:
+
+b_i · c ≥ cos(θ_fov)
+
+This condition defines a conical region in the body frame.
+
+Only stars inside this cone remain visible.
+
+---
+
+## 6. Magnitude-Based Detection
+
+Even if a star lies within the FOV, it may still be too dim to detect.
+
+A magnitude threshold is introduced:
+
+m ≤ m_lim
+
+Stars exceeding this threshold are removed from the observable set.
+
+This models the sensitivity limit of the optical sensor.
+
+---
+
+## 7. Measurement Noise Model
+
+Real sensors contain measurement noise.
+
+Noise is modeled as a small Gaussian perturbation applied to the direction
+vector.
+
+b_meas = normalize( b_true + noise )
+
+This produces the final measurement vectors used by the estimation algorithm.
+
+---
+
+## 8. Final Output
+
+The simulation outputs vector pairs:
+
+{ r_i , b_i_meas }
+
+These pairs form the direct input to Wahba’s attitude estimation problem.
+
+---
+
+## 9. Key Insight
+
+The simulator now reproduces the full sensing pipeline of a star tracker:
+
+star field  
+→ spacecraft rotation  
+→ camera field-of-view  
+→ brightness detection  
+→ sensor noise  
+
+This provides realistic measurement data for evaluating attitude estimation
+algorithms such as QUEST.
+
+---
+
+## Next Step
+
+Connect the measurement simulator to the QUEST estimator and evaluate the
+attitude estimation error.
+
+---
+## Day 9 – Attitude Estimation Using QUEST with Simulated Star Tracker Measurements
+
+### Goal
+
+Integrate the star tracker measurement simulator with the Wahba / QUEST
+attitude estimation algorithm and evaluate the resulting attitude estimation
+error.
+
+This step completes the first fully functional attitude determination pipeline.
+
+---
+
+## 1. Motivation
+
+A star tracker does not directly output spacecraft attitude.
+
+Instead, it measures the directions of stars in the camera frame.
+These measurements must be combined with known inertial star directions
+to estimate the spacecraft orientation.
+
+This estimation problem is known as **Wahba’s problem**.
+
+The objective is to find the rotation matrix R that best aligns
+inertial reference vectors with measured body-frame vectors.
+
+---
+
+## 2. Measurement Inputs
+
+The simulator developed in previous days generates measurement pairs:
+
+r_i : inertial star directions  
+b_i : measured body-frame directions
+
+These vectors satisfy the relationship:
+
+b_i ≈ R_true r_i
+
+where R_true represents the true spacecraft attitude.
+
+Due to sensor noise and filtering effects, the relationship is not exact,
+making this a least-squares estimation problem.
+
+---
+
+## 3. Wahba’s Problem
+
+The estimation problem can be written as:
+
+minimize
+
+Σ a_i || b_i − R r_i ||²
+
+subject to
+
+R ∈ SO(3)
+
+where a_i are weighting coefficients.
+
+The goal is to find the rotation matrix that minimizes the misalignment
+between predicted and measured star directions.
+
+---
+
+## 4. Davenport q-Method
+
+Instead of solving the optimization directly over rotation matrices,
+the problem is reformulated using quaternion parameterization.
+
+This leads to the quadratic form:
+
+maximize
+
+qᵀ K q
+
+subject to
+
+||q|| = 1
+
+where K is a symmetric matrix constructed from the vector pairs.
+
+The optimal solution is the eigenvector corresponding to the
+largest eigenvalue of K.
+
+This method is known as the **Davenport q-method** and forms the
+mathematical basis of the QUEST algorithm.
+
+---
+
+## 5. Attitude Error Metric
+
+To evaluate the estimation accuracy, the angular difference between
+the true rotation and the estimated rotation is computed.
+
+Given:
+
+R_true  
+R_est
+
+the rotation error angle is defined as:
+
+θ = arccos( ( trace(R_trueᵀ R_est) − 1 ) / 2 )
+
+This value represents the smallest rotation angle required
+to align the estimated orientation with the true orientation.
+
+---
+
+## 6. Simulation Procedure
+
+The following simulation pipeline was executed:
+
+1. Generate random inertial star vectors  
+2. Apply known spacecraft rotation R_true  
+3. Apply FOV filtering  
+4. Apply magnitude detection threshold  
+5. Add Gaussian measurement noise  
+6. Solve Wahba’s problem using the Davenport q-method  
+7. Convert quaternion solution to rotation matrix  
+8. Compute attitude estimation error
+
+---
+
+## 7. Numerical Result
+
+Example output from the simulation:
+
+Visible stars: 463
+
+Attitude Error ≈ 0.0035 degrees
+
+The estimated rotation matrix closely matches the true rotation matrix.
+
+The difference between elements is on the order of 10⁻⁵,
+which is consistent with the injected measurement noise.
+
+---
+
+## 8. Interpretation of Results
+
+The small attitude error confirms that the full pipeline is functioning
+correctly.
+
+Key observations:
+
+- The QUEST estimator successfully reconstructs spacecraft attitude
+  from noisy star measurements.
+
+- The estimation accuracy depends on the measurement noise level
+  and the number of available star vectors.
+
+- The simulator now produces realistic measurement conditions
+  similar to those encountered by real star tracker systems.
+
+---
+
+## 9. System Architecture Achieved
+
+At this stage the simulation system contains three main components:
+
+Star field model  
+→ Star tracker sensor model  
+→ Attitude estimation algorithm
+
+This modular structure mirrors the architecture used in
+actual spacecraft attitude determination research.
+
+---
+
+## Day 9 Conclusion
+
+The complete star tracker attitude estimation pipeline has been
+successfully implemented and validated.
+
+The system now performs:
+
+star field simulation  
+→ spacecraft attitude transformation  
+→ sensor measurement modeling  
+→ Wahba attitude estimation  
+→ estimation error evaluation
+
+This marks the completion of the first full attitude determination
+simulation framework.
+
+---
+
+## Next Step
+
+Perform Monte Carlo experiments to analyze the relationship between:
+
+measurement noise  
+number of observed stars  
+field-of-view size  
+
+and the resulting attitude estimation accuracy.
+
+This analysis will produce performance curves used to evaluate
+the robustness of the star tracker system.
