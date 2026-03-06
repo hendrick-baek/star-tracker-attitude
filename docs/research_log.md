@@ -2146,3 +2146,191 @@ field-of-view size
 
 This analysis will produce performance curves that characterize
 the robustness and accuracy of each attitude estimation method.
+
+---
+## Day 12 – Monte Carlo Performance Analysis of TRIAD vs QUEST
+
+### Goal
+
+Evaluate the statistical performance of the implemented attitude determination algorithms (TRIAD and QUEST) using Monte Carlo simulations.
+
+The objective of this step is to analyze:
+
+- estimation accuracy
+- robustness to measurement noise
+- statistical distribution of attitude errors
+- the effect of the number of observed stars
+
+This marks the transition from algorithm implementation to quantitative performance evaluation.
+
+---
+
+### 1. Motivation
+
+In previous stages, the star tracker simulation pipeline and the attitude estimation algorithms were successfully implemented and verified through individual simulation runs.
+
+However, a single simulation run cannot reliably characterize the performance of an estimator.
+
+In practice, star tracker measurements vary due to several stochastic factors:
+
+- random star positions
+- visible star selection by the field-of-view
+- measurement noise
+
+Because these conditions change for every observation, the resulting attitude estimation error also varies.
+
+Therefore, performance must be evaluated statistically.
+
+Monte Carlo simulation provides a systematic method for this by repeating the same experiment many times under different random conditions.
+
+---
+
+### 2. Monte Carlo Simulation Structure
+
+Each Monte Carlo trial follows the complete star tracker measurement pipeline developed in previous days.
+
+The simulation procedure is:
+
+1. Generate random inertial star vectors  
+2. Apply spacecraft attitude rotation  
+3. Apply field-of-view filtering  
+4. Apply magnitude detection threshold  
+5. Add Gaussian measurement noise  
+6. Estimate spacecraft attitude using TRIAD and QUEST  
+7. Compute attitude estimation error  
+
+The attitude error is calculated using the relative rotation:
+
+R_err = R_true^T R_est
+
+and the corresponding angular difference:
+
+θ = arccos((trace(R_err) − 1) / 2)
+
+This angle represents the smallest rotation required to align the estimated attitude with the true spacecraft orientation.
+
+---
+
+### 3. Noise Sensitivity Experiment
+
+A Monte Carlo experiment was conducted to analyze the effect of measurement noise.
+
+The simulation parameters were:
+
+Noise sigma values tested:
+
+0.001  
+0.005  
+0.01  
+0.05  
+
+For each noise level, 100 Monte Carlo trials were performed.
+
+The following statistics were recorded:
+
+- mean attitude error
+- standard deviation of the error
+- mean number of visible stars
+
+---
+
+### 4. Results – Noise vs Attitude Error
+
+The results show that increasing measurement noise leads to larger attitude estimation errors for both algorithms.
+
+However, a clear performance difference is observed.
+
+QUEST consistently produces significantly smaller errors than TRIAD.
+
+Example results:
+
+σ = 0.001  
+TRIAD mean error ≈ 0.36 deg  
+QUEST mean error ≈ 0.028 deg  
+
+σ = 0.05  
+TRIAD mean error ≈ 17.36 deg  
+QUEST mean error ≈ 1.27 deg  
+
+This difference arises from the number of vectors used by the algorithms.
+
+TRIAD determines attitude using only two vector observations.
+
+QUEST solves the Wahba optimization problem using all available star measurements.
+
+As a result, QUEST benefits from averaging effects that reduce the influence of measurement noise.
+
+---
+
+### 5. Error Standard Deviation Analysis
+
+The standard deviation of the attitude error provides information about estimator stability.
+
+The Monte Carlo results show that TRIAD has a significantly larger standard deviation than QUEST.
+
+For large noise levels, the TRIAD standard deviation becomes extremely large.
+
+This indicates that TRIAD occasionally produces very large errors.
+
+These failures occur when the two vectors used by TRIAD become nearly collinear under noisy measurements, causing geometric instability in the cross-product construction.
+
+QUEST avoids this issue because it uses multiple vector observations and solves a global optimization problem.
+
+---
+
+### 6. Error Distribution Analysis
+
+To further analyze estimator robustness, the distribution of estimation errors was examined using:
+
+- error histograms
+- cumulative distribution functions (CDF)
+
+The histogram shows that QUEST errors are tightly concentrated near zero degrees.
+
+In contrast, TRIAD errors are spread over a much wider range and occasionally produce large outliers.
+
+The CDF analysis confirms this behavior.
+
+QUEST reaches high cumulative probability at very small error thresholds, indicating that most trials produce accurate estimates.
+
+TRIAD reaches the same probability level only at much larger error thresholds.
+
+This demonstrates that QUEST is significantly more reliable under measurement noise.
+
+---
+
+### 7. Effect of Star Count
+
+Additional Monte Carlo experiments were performed by varying the total number of stars in the simulated sky.
+
+Results show that increasing the number of stars improves QUEST estimation accuracy.
+
+As more stars become visible within the field of view, the Wahba optimization uses more vector observations, reducing estimation error.
+
+In contrast, TRIAD does not significantly benefit from additional stars because it always uses only two vectors.
+
+---
+
+### Conclusion
+
+The Monte Carlo experiments demonstrate several important characteristics of the implemented algorithms.
+
+First, QUEST significantly outperforms TRIAD in terms of estimation accuracy under noisy measurements.
+
+Second, QUEST exhibits much smaller error variance, indicating more stable estimation performance.
+
+Third, increasing the number of available star observations improves QUEST accuracy, consistent with the Wahba problem formulation.
+
+Overall, the results confirm that QUEST provides both higher accuracy and greater robustness than TRIAD for star tracker attitude determination.
+
+---
+
+### Next Step
+
+Extend the Monte Carlo analysis by investigating additional factors influencing estimation performance:
+
+- field-of-view size
+- magnitude detection threshold
+- eigenvalue gap analysis
+
+These experiments will provide deeper insight into the relationship between sensor configuration and attitude estimation accuracy.
