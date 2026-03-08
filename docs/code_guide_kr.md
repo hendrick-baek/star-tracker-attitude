@@ -48,65 +48,42 @@ R : Inertial → Body 회전 행렬
 
 ---
 
-# 3. 프로젝트 디렉토리 구조
+# 3. 코드 흐름
+rotations
+↓
+quaternion
+↓
+wahba
+↓
+triad
+↓
+quest
+↓
+star_field
+↓
+star_tracker_sensor
+↓
+star_tracker_simulator
+↓
+monte_carlo
 
-project/
-
-│  
-├── figures/  
-│   Monte Carlo 실험 결과 그래프 저장  
-
-│  
-├── notebooks/  
-│   day1_rotation_check.ipynb  
-
-│  
-├── src/  
-
-│  
-├── rotations.py  
-├── quaternion.py  
-├── wahba.py  
-├── triad.py  
-├── quest.py  
-
-│  
-├── star_field.py  
-├── star_tracker_sensor.py  
-├── star_tracker_simulator.py  
-
-│  
-├── phase1_noise_validation.py  
-
-│  
-├── monte_carlo.py  
-├── monte_carlo_extended.py  
-
-│  
-├── plot_day12_noise_sweep.py  
-├── plot_day12_extended.py  
-
-│  
-├── test_day7_visible_count.py  
-├── test_day7_magnitude_cut.py  
-├── test_day8_pipeline.py  
-├── test_day9_attitude_estimation.py  
-├── test_day10_triad.py  
-├── test_day11_quest.py  
-├── test_day12_monte_carlo.py  
-
-│  
-├── test_quaternion.py  
-├── test_rotation.py  
-├── test_wahba.py  
-
-│  
-└── __pycache__/  
-
-│  
-├── README.md  
-├── requirements.txt  
-└── .gitignore  
+Star Field 생성
+        ↓
+센서 모델 적용 (FOV + magnitude)
+        ↓
+Body frame 변환
+        ↓
+노이즈 추가
+        ↓
+vector pair 생성
+        ↓
+TRIAD / QUEST
+        ↓
+자세 추정
+        ↓
+오차 계산
+        ↓
+Monte Carlo 분석
 
 ---
 
